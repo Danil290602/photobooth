@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Licowa Photo Booth</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body{
+  margin:0;
+  background:#111;
+  color:white;
+  font-family:Arial;
+  overflow:hidden;
+}
+
+.main{
+  display:flex;
+  height:100vh;
+  padding:10px;
+  gap:10px;
+}
+
+/* PANEL KIRI */
+.left-panel{
+  width:16%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding-top:60px;
+  gap:12px;
+}
+
+.left-panel button{
+  width:100%;
+}
+
+/* PANEL TENGAH */
+.center-panel{
+  width:62%;
+  display:flex;
+  flex-direction:column;
+}
+
+.video-wrap{
+  position:relative;
+}
+
+video{
+  width:100%;
+  border-radius:16px;
+  border:3px solid #ff0055;
+  transform: scaleX(-1); /* mirror kamera */
+}
+
+/* FRAME GALLERY */
+.frame-gallery{
+  display:flex;
+  gap:8px;
+  margin-top:8px;
+  overflow-x:auto;
+}
+
+.frame-gallery img{
+  height:70px;
+  border-radius:10px;
+  border:3px solid transparent;
+  cursor:pointer;
+}
+
+.frame-gallery img.active{
+  border-color:#ff0055;
+}
+
+/* PANEL KANAN */
+.right-panel{
+  width:22%;
+  display:flex;
+  flex-direction:column;
+}
+
+canvas{
+  width:100%;
+  max-height:85vh;
+  background:black;
+  border-radius:16px;
+}
+
+.download-btn{
+  margin-top:10px;
+}
+
+/* COUNTDOWN */
+#countdown{
+  position:absolute;
+  top:40%;
+  left:0;
+  right:0;
+  text-align:center;
+  font-size:72px;
+  font-weight:bold;
+}
+
+/* FLASH */
+#flash{
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:white;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity 0.15s;
+  z-index:999;
+}
+
+.hidden{display:none;}
+
+button{
+  padding:14px;
+  border:none;
+  border-radius:12px;
+  font-size:18px;
+  font-weight:bold;
+  background:linear-gradient(45deg,#ff0055,#ff7a00);
+  color:white;
+}
+
+.secondary{
+  background:#333;
+}
+</style>
+</head>
+
+<body>
+
+<div class="main">
+
+<!-- PANEL KIRI -->
+<div class="left-panel">
+<button onclick="startSession()">▶️ MULAI FOTO</button>
+<button class="secondary" onclick="reset()">🔄 ULANGI</button>
+</div>
+
+<!-- PANEL TENGAH -->
+<div class="center-panel">
+
+<div class="video-wrap">
+<video id="video" autoplay playsinline></video>
+<div id="countdown" class="hidden"></div>
+</div>
+
+<div class="frame-gallery" id="frameGallery"></div>
+
+</div>
+
+<!-- PANEL KANAN -->
+<div class="right-panel">
+<canvas id="canvas"></canvas>
+<button class="download-btn" onclick="download()">⬇️ DOWNLOAD</button>
+</div>
+
+</div>
+
+<div id="flash"></div>
+
+<script>
+const video=document.getElementById("video");
+const canvas=document.getElementById("canvas");
+const ctx=canvas.getContext("2d");
+const countdownEl=document.getElementById("countdown");
+const frameGallery=document.getElementById("frameGallery");
+const flash=document.getElementById("flash");
+
+let frame=new Image();
+let photos=[];
+
+const TOTAL=4;
+const TIMER=3;
+
+/* ukuran strip 5x15 */
+const STRIP_WIDTH=1000;
+const STRIP_HEIGHT=3000;
+canvas.width=STRIP_WIDTH;
+canvas.height=STRIP_HEIGHT;
+
+/* daftar frame */
+const frameList=[
+"frames/frame1.png",
+"frames/frame2.png",
+"frames/frame3.png"
+];
+
+frameList.forEach(src=>{
+const img=document.createElement("img");
+img.src=src;
+img.onclick=()=>selectFrame(img);
+frameGallery.appendChild(img);
+});
+
+/* kamera */
+navigator.mediaDevices.getUserMedia({video:true})
+.then(stream=>video.srcObject=stream);
+
+/* flash effect */
+function shutterFlash(){
+  flash.style.opacity="1";
+  setTimeout(()=>flash.style.opacity="0",120);
+}
+
+/* countdown */
+function countdown(sec){
+return new Promise(res=>{
+countdownEl.classList.remove("hidden");
+let s=sec;
+countdownEl.textContent=s;
+
+const i=setInterval(()=>{
+s--;
+countdownEl.textContent=s;
+
+if(s===0){
+clearInterval(i);
+countdownEl.classList.add("hidden");
+res();
+}
+},1000);
+});
+}
+
+/* capture foto mirror */
+function capture(){
+  shutterFlash();
+
+  const c=document.createElement("canvas");
+  c.width=1000;
+  c.height=1000;
+  const cctx=c.getContext("2d");
+
+  cctx.translate(c.width,0);
+  cctx.scale(-1,1);
+  cctx.drawImage(video,0,0,1000,1000);
+
+  photos.push(c);
+}
+
+/* sesi foto */
+async function startSession(){
+photos=[];
+for(let i=0;i<TOTAL;i++){
+await countdown(TIMER);
+capture();
+}
+render();
+}
+
+/* render strip */
+function render(){
+const h=canvas.height/TOTAL;
+ctx.clearRect(0,0,canvas.width,canvas.height);
+
+photos.forEach((p,i)=>{
+ctx.drawImage(p,0,i*h,canvas.width,h);
+});
+
+if(frame.src)
+ctx.drawImage(frame,0,0,canvas.width,canvas.height);
+}
+
+/* pilih frame */
+function selectFrame(img){
+document.querySelectorAll(".frame-gallery img")
+.forEach(i=>i.classList.remove("active"));
+
+img.classList.add("active");
+frame.src=img.src;
+frame.onload=render;
+}
+
+/* reset */
+function reset(){
+ctx.clearRect(0,0,canvas.width,canvas.height);
+photos=[];
+}
+
+/* download */
+function download(){
+const a=document.createElement("a");
+a.download="photostrip.jpg";
+a.href=canvas.toDataURL("image/jpeg",0.95);
+a.click();
+}
+</script>
+
+</body>
+</html>
