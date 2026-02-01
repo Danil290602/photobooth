@@ -56,16 +56,22 @@ video{
 /* FRAME GALLERY */
 .frame-gallery{
   display:flex;
-  gap:8px;
+  gap:12px;
   margin-top:8px;
   overflow-x:auto;
+  padding-bottom:6px;
 }
 
 .frame-gallery img{
-  height:70px;
-  border-radius:10px;
+  height:120px;          /* diperbesar */
+  border-radius:14px;
   border:3px solid transparent;
   cursor:pointer;
+  transition: transform 0.2s;
+}
+
+.frame-gallery img:hover{
+  transform: scale(1.1);
 }
 
 .frame-gallery img.active{
@@ -145,14 +151,12 @@ button{
 
 <!-- PANEL TENGAH -->
 <div class="center-panel">
-
 <div class="video-wrap">
 <video id="video" autoplay playsinline></video>
 <div id="countdown" class="hidden"></div>
 </div>
 
 <div class="frame-gallery" id="frameGallery"></div>
-
 </div>
 
 <!-- PANEL KANAN -->
@@ -193,10 +197,10 @@ const frameList=[
 ];
 
 frameList.forEach(src=>{
-const img=document.createElement("img");
-img.src=src;
-img.onclick=()=>selectFrame(img);
-frameGallery.appendChild(img);
+  const img=document.createElement("img");
+  img.src=src;
+  img.onclick=()=>selectFrame(img);
+  frameGallery.appendChild(img);
 });
 
 /* kamera */
@@ -229,7 +233,7 @@ res();
 });
 }
 
-/* capture foto mirror */
+/* capture mirror */
 function capture(){
   shutterFlash();
 
@@ -255,17 +259,46 @@ capture();
 render();
 }
 
-/* render strip */
+/* render pas dengan frame */
 function render(){
-const h=canvas.height/TOTAL;
-ctx.clearRect(0,0,canvas.width,canvas.height);
+  const h = canvas.height / TOTAL;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
 
-photos.forEach((p,i)=>{
-ctx.drawImage(p,0,i*h,canvas.width,h);
-});
+  photos.forEach((p,i)=>{
+    const slotW = canvas.width;
+    const slotH = h;
 
-if(frame.src)
-ctx.drawImage(frame,0,0,canvas.width,canvas.height);
+    const imgW = p.width;
+    const imgH = p.height;
+
+    const imgRatio = imgW / imgH;
+    const slotRatio = slotW / slotH;
+
+    let drawW, drawH, offsetX, offsetY;
+
+    if(imgRatio > slotRatio){
+      drawH = slotH;
+      drawW = drawH * imgRatio;
+      offsetX = -(drawW - slotW) / 2;
+      offsetY = 0;
+    } else {
+      drawW = slotW;
+      drawH = drawW / imgRatio;
+      offsetX = 0;
+      offsetY = -(drawH - slotH) / 2;
+    }
+
+    ctx.drawImage(
+      p,
+      offsetX,
+      i*h + offsetY,
+      drawW,
+      drawH
+    );
+  });
+
+  if(frame.src)
+    ctx.drawImage(frame,0,0,canvas.width,canvas.height);
 }
 
 /* pilih frame */
