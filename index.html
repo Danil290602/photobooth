@@ -1,228 +1,78 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Photo Booth Studio</title>
-
-<script src="https://cdn.tailwindcss.com"></script>
-
-<style>
-video { transform: scaleX(-1); }
-
-/* FLASH */
-.flash-active { animation: flash 0.4s ease-out; }
-@keyframes flash { from {opacity:1} to {opacity:0} }
-
-/* TIMER ANGKA (PASTI KELIHATAN) */
-.timer-anim {
-  animation: pop 0.6s ease-out;
-}
-@keyframes pop {
-  0%   { transform: scale(0.5); opacity: 0; }
-  60%  { transform: scale(1.25); opacity: 1; }
-  100% { transform: scale(1); opacity: 1; }
-}
-
-/* SMILE */
-.smile-anim {
-  animation: smilePop 0.7s ease-out;
-  color: #22c55e;
-}
-@keyframes smilePop {
-  0%   { transform: scale(0.4); opacity: 0; }
-  60%  { transform: scale(1.4); opacity: 1; }
-  100% { transform: scale(1); opacity: 1; }
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Professional Photo Booth</title>
+    <link rel="stylesheet" href="style.css">
 </head>
+<body>
+    <div id="app">
+        <!-- Idle Screen -->
+        <div id="idle-screen">
+            <img id="logo" src="assets/logo.png" alt="Logo" onerror="this.style.display='none';">
+            <h1>Selamat Datang di Photo Booth!</h1>
+            <p>Sentuh layar untuk memulai</p>
+            <div class="animation">📸</div>
+        </div>
 
-<body class="bg-neutral-900 text-white min-h-screen p-4">
+        <!-- Setup Screen -->
+        <div id="setup-screen" class="hidden">
+            <h2>Pilih Jumlah Foto</h2>
+            <select id="photo-count">
+                <option value="3">3 Foto</option>
+                <option value="4">4 Foto</option>
+            </select>
+            <h2>Pilih Frame</h2>
+            <div id="frame-options"></div>
+            <h2>Pilih Filter</h2>
+            <select id="filter-select">
+                <option value="none">Tidak Ada</option>
+                <option value="grayscale">Hitam Putih</option>
+                <option value="sepia">Vintage</option>
+            </select>
+            <button id="start-session">Mulai Sesi</button>
+        </div>
 
-<div id="flash" class="fixed inset-0 bg-white opacity-0 pointer-events-none z-50"></div>
+        <!-- Camera Screen -->
+        <div id="camera-screen" class="hidden">
+            <video id="video" autoplay></video>
+            <canvas id="canvas" class="hidden"></canvas>
+            <div id="countdown" class="hidden">3</div>
+            <div id="controls">
+                <button id="mirror-toggle">Mirror: ON</button>
+                <button id="start-photo">Ambil Foto</button>
+                <button id="retake" class="hidden">Retake</button>
+            </div>
+            <div id="frame-overlay"></div>
+        </div>
 
-<header class="text-center mb-6">
-  <h1 class="text-2xl font-black text-blue-500">
-    PHOTOBOOTH <span class="text-white">STUDIO</span>
-  </h1>
-</header>
+        <!-- Preview Screen -->
+        <div id="preview-screen" class="hidden">
+            <div id="photo-strip"></div>
+            <div id="actions">
+                <button id="download">Download</button>
+                <div id="qr-code"></div>
+                <button id="share-whatsapp">Share WhatsApp</button>
+                <button id="new-session">Sesi Baru</button>
+            </div>
+        </div>
 
-<main class="max-w-6xl mx-auto grid grid-cols-12 gap-6">
+        <!-- Gallery Screen -->
+        <div id="gallery-screen" class="hidden">
+            <h2>Galeri Foto</h2>
+            <div id="gallery"></div>
+            <button id="back-to-idle">Kembali</button>
+        </div>
 
-<!-- LEFT -->
-<div class="col-span-12 md:col-span-3 space-y-4">
-  <div class="bg-neutral-800 p-4 rounded-2xl border border-neutral-700">
-    <label class="text-xs font-bold text-neutral-400 uppercase">Layout & Timer</label>
-
-    <div class="grid grid-cols-3 gap-2 mt-3">
-      <button data-layout="1" class="layoutBtn bg-blue-600 py-2 rounded-lg text-xs">1</button>
-      <button data-layout="3" class="layoutBtn bg-neutral-700 py-2 rounded-lg text-xs">3</button>
-      <button data-layout="4" class="layoutBtn bg-neutral-700 py-2 rounded-lg text-xs">4</button>
+        <!-- Operator Mode -->
+        <div id="operator-mode" class="hidden">
+            <h2>Mode Operator</h2>
+            <button id="view-gallery">Lihat Galeri</button>
+            <button id="exit-operator">Keluar</button>
+        </div>
     </div>
 
-    <select id="timerSelect" class="w-full bg-neutral-700 p-2 rounded-lg text-sm mt-4">
-      <option value="3">3 Detik</option>
-      <option value="5" selected>5 Detik</option>
-      <option value="10">10 Detik</option>
-    </select>
-
-    <button id="startBtn" class="w-full bg-blue-600 py-3 rounded-xl font-bold mt-4">
-      AKTIFKAN KAMERA
-    </button>
-  </div>
-
-  <button id="captureBtn"
-    class="w-full bg-green-600 py-4 rounded-2xl font-black text-xl disabled:opacity-30"
-    disabled>
-    MULAI FOTO
-  </button>
-</div>
-
-<!-- CAMERA -->
-<div class="col-span-12 md:col-span-6 relative bg-black rounded-3xl overflow-hidden border-4 border-neutral-800 aspect-[3/4] md:aspect-square">
-  <video id="video" class="w-full h-full object-cover" autoplay playsinline></video>
-
-  <div id="timerDisplay"
-    class="absolute inset-0 flex items-center justify-center
-           text-white text-9xl font-black hidden pointer-events-none">
-  </div>
-</div>
-
-<!-- RIGHT -->
-<div class="col-span-12 md:col-span-3 bg-neutral-800 p-4 rounded-2xl border border-neutral-700 flex flex-col items-center">
-  <p class="text-xs font-bold text-neutral-400 uppercase self-start mb-2">Preview</p>
-
-  <div class="w-full bg-neutral-900 rounded-lg overflow-hidden mb-4 border border-neutral-700">
-    <img id="photoPreview" class="w-full hidden">
-    <div id="placeholder" class="py-24 text-center text-neutral-600 text-[10px] uppercase">
-      Siap untuk berfoto
-    </div>
-  </div>
-
-  <div class="grid grid-cols-2 gap-2 w-full">
-    <button id="downloadBtn" class="bg-purple-600 py-2 rounded-lg text-xs font-bold" disabled>SIMPAN</button>
-    <button id="retakeBtn" class="bg-red-600 py-2 rounded-lg text-xs font-bold" disabled>HAPUS</button>
-  </div>
-</div>
-
-</main>
-
-<canvas id="canvas" class="hidden"></canvas>
-
-<script>
-let stream = null;
-let layout = 1;
-
-const video = document.getElementById('video');
-const canvas = document.getElementById('canvas');
-const timer = document.getElementById('timerDisplay');
-const photoPreview = document.getElementById('photoPreview');
-
-/* CAMERA */
-startBtn.onclick = async () => {
-  stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:"user" }});
-  video.srcObject = stream;
-  captureBtn.disabled = false;
-};
-
-/* LAYOUT */
-document.querySelectorAll('[data-layout]').forEach(btn=>{
-  btn.onclick=()=>{
-    layout=parseInt(btn.dataset.layout);
-    document.querySelectorAll('[data-layout]').forEach(b=>{
-      b.classList.replace('bg-blue-600','bg-neutral-700');
-    });
-    btn.classList.replace('bg-neutral-700','bg-blue-600');
-  };
-});
-
-/* COUNTDOWN FINAL (FIX) */
-function countdown(seconds){
-  return new Promise(resolve=>{
-    let t = seconds;
-    timer.classList.remove('hidden');
-
-    const iv = setInterval(()=>{
-      timer.classList.remove('timer-anim','smile-anim');
-      void timer.offsetWidth;
-
-      if(t > 0){
-        timer.textContent = t;
-        timer.className =
-          "absolute inset-0 flex items-center justify-center text-white text-9xl font-black timer-anim";
-      }
-
-      if(t === 0){
-        timer.textContent = "SMILE!";
-        timer.className =
-          "absolute inset-0 flex items-center justify-center text-7xl font-black smile-anim";
-      }
-
-      if(t < 0){
-        clearInterval(iv);
-        setTimeout(()=>{
-          timer.classList.add('hidden');
-          resolve();
-        },600);
-      }
-
-      t--;
-    },1000);
-  });
-}
-
-/* CAPTURE */
-captureBtn.onclick = async ()=>{
-  const delay = parseInt(timerSelect.value);
-  const w = video.videoWidth;
-  const h = video.videoHeight;
-
-  canvas.width = w + 40;
-  canvas.height = h * layout + 120;
-  const ctx = canvas.getContext('2d');
-
-  ctx.fillStyle="#fff";
-  ctx.fillRect(0,0,canvas.width,canvas.height);
-
-  for(let i=0;i<layout;i++){
-    await countdown(delay);
-
-    flash.classList.add('flash-active');
-    setTimeout(()=>flash.classList.remove('flash-active'),400);
-
-    ctx.save();
-    ctx.scale(-1,1);
-    ctx.drawImage(video,-w-20,20+i*h,w,h);
-    ctx.restore();
-  }
-
-  ctx.fillStyle="#000";
-  ctx.font="bold 42px Slab Serif";
-  ctx.textAlign="center";
-  ctx.fillText("RUANG RASA BOOTH",canvas.width/2,canvas.height-40);
-
-  photoPreview.src = canvas.toDataURL("image/png");
-  photoPreview.classList.remove('hidden');
-  placeholder.classList.add('hidden');
-
-  downloadBtn.disabled=false;
-  retakeBtn.disabled=false;
-};
-
-/* DOWNLOAD */
-downloadBtn.onclick=()=>{
-  const a=document.createElement('a');
-  a.href=photoPreview.src;
-  a.download=`photo-${Date.now()}.png`;
-  a.click();
-};
-
-/* RETAKE */
-retakeBtn.onclick=()=>{
-  photoPreview.classList.add('hidden');
-  placeholder.classList.remove('hidden');
-};
-</script>
-
+    <script src="script.js"></script>
 </body>
 </html>
